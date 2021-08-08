@@ -1,7 +1,7 @@
 {
-  "name": "template",
+  "name": "@heviir/service-config",
   "version": "1.0.0",
-  "description": "this is just a template",
+  "description": "service config manager",
   "main": "dist/index.js",
   "scripts": {
     "test": "jest",
