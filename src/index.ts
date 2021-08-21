@@ -4,35 +4,27 @@ import { resolve } from 'path';
 
 const serviceConfig = {
   get database() {
-    if (!config.has('database')) {
-      throw new Error('no database config provided');
-    }
-    const databaseConfig = config.get<DatabaseConfig>('database');
-    databaseConfig.database ??= serviceConfig.application.name;
-    for (const prop of <const>['host', 'port', 'user', 'password', 'database']) {
-      if (!databaseConfig[prop]) {
-        throw new Error(`database config is missing property '${prop}'`);
-      }
-    }
+    const databaseConfig: DatabaseConfig = {
+      database: getConfigValue('database.database', serviceConfig.application.name),
+      host: getConfigValue('database.host'),
+      port: getConfigValue('database.port', 5432),
+      user: getConfigValue('database.user'),
+      password: getConfigValue('database.password'),
+    };
     return databaseConfig;
   },
 
   get application() {
-    const name = config.get<string>('name');
+    const name = getConfigValue<string>('name');
     const applicationConfig: ApplicationConfig = {
       name,
-      host: config.get('host'),
-      port: config.get('port'),
-      version: config.get('version') ?? '1.0.0',
-      description: config.get('description') ?? `${name} service`,
-      consumes: config.get('consumes') ?? ['application/json'],
-      produces: config.get('produces') ?? ['application/json'],
+      host: getConfigValue('host'),
+      port: getConfigValue('port'),
+      version: getConfigValue('version', '1.0.0'),
+      description: getConfigValue('description', `${name} service`),
+      consumes: getConfigValue('consumes', ['application/json']),
+      produces: getConfigValue('produces', ['application/json']),
     };
-    for (const prop of <const>['name', 'host', 'port']) {
-      if (!applicationConfig[<keyof ApplicationConfig>prop]) {
-        throw new Error(`application config is missing required property ${prop}`);
-      }
-    }
     return applicationConfig;
   },
 
@@ -54,8 +46,8 @@ const serviceConfig = {
   get swagger() {
     const applicationConfig = serviceConfig.application;
     const swaggerConfig: SwaggerConfig = {
-      routePrefix: config.get('documentation.routePrefix') ?? '/documentation',
-      exposeRoute: config.get('documentation.exposeRoutes') ?? true,
+      routePrefix: getConfigValue('documentation.routePrefix', '/documentation'),
+      exposeRoute: getConfigValue('documentation.exposeRoutes', true),
       swagger: {
         info: {
           title: `${applicationConfig.name} API`,
@@ -90,6 +82,16 @@ const serviceConfig = {
 };
 
 export default serviceConfig;
+
+function getConfigValue<T>(key: string, defaultValue?: T) {
+  if (config.has(key)) {
+    return config.get<T>(key);
+  }
+  if (defaultValue === undefined) {
+    throw new Error(`application config is missing required property ${key} without default value`);
+  }
+  return defaultValue;
+}
 
 interface DatabaseConfig {
   database: string;
