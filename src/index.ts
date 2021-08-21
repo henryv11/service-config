@@ -36,9 +36,10 @@ const serviceConfig = {
   },
 
   get environment() {
+    const environment = process.env.NODE_ENV || 'development';
     const environmentConfig: EnvironmentConfig = {
-      isProduction: process.env.NODE_ENV === 'production',
-      isDevelopment: process.env.NODE_ENV === 'development',
+      isProduction: environment === 'production',
+      isDevelopment: environment === 'development',
     };
     return environmentConfig;
   },
