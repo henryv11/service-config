@@ -1,13 +1,12 @@
 # Service Config
 
-
 Place config.json under ./config/
 
-
 ## Full config
+
 ```json
 {
-  "name": "service-name", // required, string 
+  "name": "service-name", // required, string
   "port": 8080, // required, number
   "host": "0.0.0.0", // required, string
   "description": "description", // optional
@@ -35,21 +34,21 @@ Place config.json under ./config/
 ## Required config
 
 ```json
-{  
-    "name": "service name",
-    "port": 8080,
-    "host": "0.0.0.0",
-    "version": "1.0.0", // recommended
-    "database": { // required for database connection
-        "host": "postgres_host",
-        "port": 5432,
-        "user": "postgres_user",
-        "password": "postgres_password",
-        "migrationsDirectory": "./path/to/migrations", // optional, need this to run database migrations
-    },
+{
+  "name": "service name",
+  "port": 8080,
+  "host": "0.0.0.0",
+  "version": "1.0.0", // recommended
+  "database": {
+    // required for database connection
+    "host": "postgres_host",
+    "port": 5432,
+    "user": "postgres_user",
+    "password": "postgres_password",
+    "migrationsDirectory": "./path/to/migrations" // optional, need this to run database migrations
+  }
 }
 ```
-
 
 ## Usage
 

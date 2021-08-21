@@ -62,8 +62,8 @@ const serviceConfig = {
   },
 
   get auth() {
-    const publicKeyPath = resolve(__dirname, 'keys', 'public_key.pem');
-    const privateKeyPath = resolve(__dirname, 'keys', 'private_key.pem');
+    const publicKeyPath = resolve('keys', 'public_key.pem');
+    const privateKeyPath = resolve('keys', 'private_key.pem');
     if (!existsSync(publicKeyPath)) {
       throw new Error('Public key is missing');
     }
