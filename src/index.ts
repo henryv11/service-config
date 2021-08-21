@@ -10,6 +10,7 @@ const serviceConfig = {
       port: getConfigValue('database.port', 5432),
       user: getConfigValue('database.user'),
       password: getConfigValue('database.password'),
+      migrationsDirectory: getConfigValue<string | undefined>('database.migrationsDirectory', undefined, true),
     };
     return databaseConfig;
   },
@@ -84,11 +85,13 @@ const serviceConfig = {
 
 export default serviceConfig;
 
-function getConfigValue<T>(key: string, defaultValue?: T) {
+function getConfigValue<T>(key: string, defaultValue?: T): T;
+function getConfigValue<T>(key: string, defaultValue: T, isUndefinedAllowed: true): T;
+function getConfigValue<T>(key: string, defaultValue?: T, isUndefinedAllowed = false) {
   if (config.has(key)) {
     return config.get<T>(key);
   }
-  if (defaultValue === undefined) {
+  if (!isUndefinedAllowed && defaultValue === undefined) {
     throw new Error(`application config is missing required property ${key} without default value`);
   }
   return defaultValue;
