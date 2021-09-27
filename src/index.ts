@@ -56,6 +56,7 @@ const serviceConfig = {
           description: applicationConfig.description,
           version: applicationConfig.version,
         },
+        host: getConfigValue('documentation.host', 'api.dropshoppers.ee/' + applicationConfig.name),
         consumes: applicationConfig.consumes,
         produces: applicationConfig.produces,
       },
@@ -131,6 +132,7 @@ interface SwaggerConfig {
     };
     consumes: string[];
     produces: string[];
+    host: string;
   };
 }
 
