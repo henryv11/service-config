@@ -3,13 +3,7 @@ import { existsSync, readFileSync, createWriteStream } from 'fs';
 import { resolve } from 'path';
 
 const cache: Record<string, unknown> = {};
-function cached<T>(key: string, generate: () => T): T {
-  if (cache[key]) {
-    return <T>cache[key];
-  }
-  cache[key] = generate();
-  return <T>cache[key];
-}
+const cached = <T>(key: string, generate: () => T) => <T>cache[key] ?? <T>(cache[key] = generate());
 
 function getConfigValue<T>(key: string, defaultValue?: T): T;
 function getConfigValue<T>(key: string, defaultValue: T, isUndefinedAllowed: true): T;
