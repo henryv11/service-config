@@ -1,6 +1,6 @@
 {
   "name": "@heviir/service-config",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "service config manager",
   "main": "dist/index.js",
   "scripts": {
