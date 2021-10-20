@@ -1,123 +1,153 @@
 import config from 'config';
-import { existsSync, readFileSync, createWriteStream } from 'fs';
+import { createWriteStream, readFile } from 'fs';
 import { resolve } from 'path';
 
+const serviceConfig = {
+  get database() {
+    return cached(getDatabaseConfig);
+  },
+
+  get application() {
+    return cached(getApplicationConfig);
+  },
+
+  get logger() {
+    return cached(getLoggerConfig);
+  },
+
+  get environment() {
+    return cached(getEnvironmentConfig);
+  },
+
+  get swagger() {
+    return cached(getSwaggerConfig);
+  },
+
+  get auth() {
+    return cached(getAuthConfig);
+  },
+};
+
+export default serviceConfig;
+
 const cache: Record<string, unknown> = {};
-const cached = <T>(key: string, generate: () => T) => <T>cache[key] ?? <T>(cache[key] = generate());
+function cached<T>(generate: { (): T; name: string }) {
+  return <T>cache[generate.name] ?? <T>(cache[generate.name] = generate());
+}
 
 function getConfigValue<T>(key: string, defaultValue?: T): T;
-function getConfigValue<T>(key: string, defaultValue: T, isUndefinedAllowed: true): T;
+function getConfigValue<T>(key: string, defaultValue: T | undefined, isUndefinedAllowed: true): T | undefined;
 function getConfigValue<T>(key: string, defaultValue?: T, isUndefinedAllowed = false) {
   if (config.has(key)) {
     return config.get<T>(key);
   }
   if (!isUndefinedAllowed && defaultValue === undefined) {
-    throw new Error(`application config is missing required property ${key} without default value`);
+    throw new Error(`service config is missing required property "${key}"`);
   }
   return defaultValue;
 }
 
-const serviceConfig = {
-  get database() {
-    return cached<DatabaseConfig>('database', () => ({
-      database: getConfigValue('database.database', serviceConfig.application.name),
-      host: getConfigValue('database.host'),
-      port: getConfigValue('database.port', 5432),
-      user: getConfigValue('database.user'),
-      password: getConfigValue('database.password'),
-      migrationsDirectory: getConfigValue('database.migrationsDirectory', undefined, true),
-    }));
-  },
+function getDatabaseConfig(): DatabaseConfig {
+  return {
+    database: getConfigValue('database.database', serviceConfig.application.name),
+    host: getConfigValue('database.host'),
+    port: getConfigValue('database.port', 5432),
+    user: getConfigValue('database.user'),
+    password: getConfigValue('database.password'),
+    migrationsDirectory: getConfigValue('database.migrationsDirectory', undefined, true),
+  };
+}
 
-  get application() {
-    return cached<ApplicationConfig>('application', () => {
-      const name = getConfigValue<string>('name');
-      return {
-        name,
-        host: getConfigValue('host', '0.0.0.0'),
-        port: getConfigValue('port', 8080),
-        version: getConfigValue('version', '1.0.0'),
-        description: getConfigValue('description', `${name} service`),
-        consumes: getConfigValue('consumes', ['application/json']),
-        produces: getConfigValue('produces', ['application/json']),
-      };
-    });
-  },
+function getApplicationConfig(): ApplicationConfig {
+  const name = getConfigValue<string>('name');
+  return {
+    name,
+    host: getConfigValue('host', '0.0.0.0'),
+    port: getConfigValue('port', 8080),
+    version: getConfigValue('version', '1.0.0'),
+    description: getConfigValue('description', `${name} service`),
+    consumes: getConfigValue('consumes', ['application/json']),
+    produces: getConfigValue('produces', ['application/json']),
+  };
+}
 
-  get logger() {
-    return cached<LoggerConfig>('logger', () => {
-      if (serviceConfig.environment.isDevelopment) {
-        return {
-          prettyPrint: getConfigValue('logs.prettyPrint', {
-            colorize: true,
-            levelFirst: true,
-            translateTime: 'yyyy-dd-mm, h:MM:ss TT',
-            crlf: true,
-          }),
-          stream: { write: console.log },
-        };
-      } else {
-        const logDestination = resolve(getConfigValue('logs.destination', '.logs'));
-        const writeStream = createWriteStream(logDestination, { flags: 'a' });
-        return {
-          stream: { write: chunk => writeStream.write(chunk) },
-        };
-      }
-    });
-  },
-
-  get environment() {
-    return cached<EnvironmentConfig>('environment', () => {
-      const environment = process.env.NODE_ENV?.toLowerCase().startsWith('prod') ? 'production' : 'development';
-      return {
-        isProduction: environment === 'production',
-        isDevelopment: environment === 'development',
-        environment,
-      };
-    });
-  },
-
-  get swagger() {
-    return cached<SwaggerConfig>('swagger', () => {
-      const applicationConfig = serviceConfig.application;
-      return {
-        routePrefix: getConfigValue('documentation.routePrefix', '/documentation'),
-        exposeRoute: getConfigValue('documentation.exposeRoutes', true),
-        swagger: {
-          info: {
-            title: `${applicationConfig.name} API`,
-            description: applicationConfig.description,
-            version: applicationConfig.version,
-          },
-          host: getConfigValue('documentation.host', 'api.dropshoppers.ee/' + applicationConfig.name),
-          consumes: applicationConfig.consumes,
-          produces: applicationConfig.produces,
+function getLoggerConfig(): LoggerConfig {
+  const logDestination = getConfigValue('logger.destination', '.logs');
+  const writeStream = createWriteStream(resolve(logDestination), { flags: 'a', encoding: 'utf-8' });
+  if (serviceConfig.environment.isDevelopment) {
+    return {
+      prettyPrint: getConfigValue('logger.prettyPrint', {
+        colorize: true,
+        levelFirst: true,
+        translateTime: 'yyyy-dd-mm, h:MM:ss TT',
+        crlf: true,
+      }),
+      stream: {
+        write: chunk => {
+          console.log(chunk);
+          writeStream.write(chunk, 'utf8');
         },
-      };
-    });
-  },
+      },
+    };
+  } else {
+    return {
+      prettyPrint: getConfigValue('logger.prettyPrint', false),
+      stream: { write: chunk => writeStream.write(chunk, 'utf-8') },
+    };
+  }
+}
 
-  get auth() {
-    return cached<AuthConfig>('auth', () => {
-      const publicKeyPath = resolve('keys', 'public_key.pem');
-      const privateKeyPath = resolve('keys', 'private_key.pem');
-      if (!existsSync(publicKeyPath)) {
-        throw new Error('Public key is missing');
-      }
-      const publicKey = readFileSync(publicKeyPath);
-      let privateKey: Buffer | undefined;
-      if (existsSync(privateKeyPath)) {
-        privateKey = readFileSync(privateKeyPath);
-      }
-      return {
-        publicKey,
-        privateKey,
-      };
-    });
-  },
-};
+function getEnvironmentConfig(): EnvironmentConfig {
+  const environment = process.env.NODE_ENV?.toLowerCase().startsWith('prod') ? 'production' : 'development';
+  return {
+    isProduction: environment === 'production',
+    isDevelopment: environment === 'development',
+    environment,
+  };
+}
 
-export default serviceConfig;
+function getSwaggerConfig(): SwaggerConfig {
+  const applicationConfig = serviceConfig.application;
+  return {
+    routePrefix: getConfigValue('documentation.routePrefix', '/documentation'),
+    exposeRoute: getConfigValue('documentation.exposeRoutes', true),
+    swagger: {
+      info: {
+        title: `${applicationConfig.name} API`,
+        description: applicationConfig.description,
+        version: applicationConfig.version,
+      },
+      host: getConfigValue('documentation.host', 'api.dropshoppers.ee/' + applicationConfig.name),
+      consumes: applicationConfig.consumes,
+      produces: applicationConfig.produces,
+    },
+  };
+}
+
+function getAuthConfig(): AuthConfig {
+  return {
+    publicKey: new Promise((onResolve, onReject) => {
+      const path = resolve('keys', 'public_key.pem');
+      readFile(path, (error, data) => {
+        if (error) {
+          onReject(new Error('missing public key'));
+        } else {
+          onResolve(data);
+        }
+      });
+    }),
+    privateKey: new Promise(onResolve => {
+      const path = resolve('keys', 'private_key.pem');
+      readFile(path, (error, data) => {
+        if (error) {
+          onResolve(undefined);
+        } else {
+          onResolve(data);
+        }
+      });
+    }),
+  };
+}
 
 interface DatabaseConfig {
   database: string;
@@ -139,12 +169,14 @@ interface ApplicationConfig {
 }
 
 interface LoggerConfig {
-  prettyPrint?: {
-    colorize?: boolean;
-    levelFirst?: boolean;
-    translateTime?: string;
-    crlf?: boolean;
-  };
+  prettyPrint?:
+    | {
+        colorize?: boolean;
+        levelFirst?: boolean;
+        translateTime?: string;
+        crlf?: boolean;
+      }
+    | boolean;
   stream: { write(chunk: string): void };
 }
 
@@ -170,6 +202,6 @@ interface EnvironmentConfig {
 }
 
 interface AuthConfig {
-  privateKey?: Buffer;
-  publicKey: Buffer;
+  privateKey: Promise<Buffer | undefined>;
+  publicKey: Promise<Buffer>;
 }
