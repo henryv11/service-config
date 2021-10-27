@@ -1,5 +1,5 @@
 import config from 'config';
-import { createWriteStream, readFile } from 'fs';
+import { createWriteStream, readFile, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const serviceConfig = {
@@ -26,13 +26,17 @@ const serviceConfig = {
   get auth() {
     return cached(getAuthConfig);
   },
+
+  get packageInfo() {
+    return cached(getPackageInfo);
+  },
 };
 
 export default serviceConfig;
 
 const cache: Record<string, unknown> = {};
 function cached<T>(generate: { (): T; name: string }) {
-  return <T>cache[generate.name] ?? <T>(cache[generate.name] = generate());
+  return generate.name in cache ? <T>cache[generate.name] : <T>(cache[generate.name] = generate());
 }
 
 function getConfigValue<T>(key: string, defaultValue?: T): T;
@@ -48,33 +52,43 @@ function getConfigValue<T>(key: string, defaultValue?: T, isUndefinedAllowed = f
 }
 
 function getDatabaseConfig(): DatabaseConfig {
+  const environment = serviceConfig.environment;
+  const defaults =
+    environment.isDevelopment || environment.isTest
+      ? { host: 'postgres_container', user: 'postgres', password: 'postgres', port: 5432 }
+      : { port: 5432 };
   return {
     database: getConfigValue('database.database', serviceConfig.application.name),
-    host: getConfigValue('database.host'),
-    port: getConfigValue('database.port', 5432),
-    user: getConfigValue('database.user'),
-    password: getConfigValue('database.password'),
+    host: getConfigValue('database.host', defaults.host),
+    port: getConfigValue('database.port', defaults.port),
+    user: getConfigValue('database.user', defaults.user),
+    password: getConfigValue('database.password', defaults.password),
     migrationsDirectory: getConfigValue('database.migrationsDirectory', undefined, true),
   };
 }
 
 function getApplicationConfig(): ApplicationConfig {
-  const name = getConfigValue<string>('name');
+  const { name, version, description } = serviceConfig.packageInfo;
   return {
     name,
+    version,
+    description,
     host: getConfigValue('host', '0.0.0.0'),
     port: getConfigValue('port', 8080),
-    version: getConfigValue('version', '1.0.0'),
-    description: getConfigValue('description', `${name} service`),
     consumes: getConfigValue('consumes', ['application/json']),
     produces: getConfigValue('produces', ['application/json']),
   };
 }
 
-function getLoggerConfig(): LoggerConfig {
+function getLoggerConfig(): LoggerConfig | boolean {
+  const environment = serviceConfig.environment;
+  if (environment.isTest) {
+    return false;
+  }
+  const encoding = 'utf-8';
   const logDestination = getConfigValue('logger.destination', '.logs');
-  const writeStream = createWriteStream(resolve(logDestination), { flags: 'a', encoding: 'utf-8' });
-  if (serviceConfig.environment.isDevelopment) {
+  const writeStream = createWriteStream(resolve(logDestination), { flags: 'a', encoding });
+  if (environment.isDevelopment) {
     return {
       prettyPrint: getConfigValue('logger.prettyPrint', {
         colorize: true,
@@ -85,23 +99,24 @@ function getLoggerConfig(): LoggerConfig {
       stream: {
         write: chunk => {
           console.log(chunk);
-          writeStream.write(chunk, 'utf8');
+          writeStream.write(chunk, encoding);
         },
       },
     };
-  } else {
-    return {
-      prettyPrint: getConfigValue('logger.prettyPrint', false),
-      stream: { write: chunk => writeStream.write(chunk, 'utf-8') },
-    };
   }
+  return {
+    prettyPrint: getConfigValue('logger.prettyPrint', false),
+    stream: { write: chunk => writeStream.write(chunk, encoding) },
+  };
 }
 
 function getEnvironmentConfig(): EnvironmentConfig {
-  const environment = process.env.NODE_ENV?.toLowerCase().startsWith('prod') ? 'production' : 'development';
+  const nodeEnv = process.env.NODE_ENV?.toLowerCase() || '';
+  const environment = nodeEnv.startsWith('prod') ? 'production' : nodeEnv.startsWith('test') ? 'test' : 'development';
   return {
     isProduction: environment === 'production',
     isDevelopment: environment === 'development',
+    isTest: environment === 'test',
     environment,
   };
 }
@@ -110,7 +125,7 @@ function getSwaggerConfig(): SwaggerConfig {
   const applicationConfig = serviceConfig.application;
   return {
     routePrefix: getConfigValue('documentation.routePrefix', '/documentation'),
-    exposeRoute: getConfigValue('documentation.exposeRoutes', true),
+    exposeRoute: getConfigValue('documentation.exposeRoute', true),
     swagger: {
       info: {
         title: `${applicationConfig.name} API`,
@@ -147,6 +162,22 @@ function getAuthConfig(): AuthConfig {
       });
     }),
   };
+}
+
+function getPackageInfo(): PackageInfo {
+  const path = resolve('package.json');
+  const packageString = readFileSync(path, { encoding: 'utf-8' });
+  const { name, version = '1.0.0', description = name + ' service' } = JSON.parse(packageString);
+  if (!name) {
+    throw new Error('package.json is missing property "name"');
+  }
+  return { name, version, description };
+}
+
+interface PackageInfo {
+  name: string;
+  version: string;
+  description: string;
 }
 
 interface DatabaseConfig {
@@ -198,7 +229,8 @@ interface SwaggerConfig {
 interface EnvironmentConfig {
   isProduction: boolean;
   isDevelopment: boolean;
-  environment: 'production' | 'development';
+  isTest: boolean;
+  environment: 'production' | 'development' | 'test';
 }
 
 interface AuthConfig {
