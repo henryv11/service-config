@@ -125,7 +125,7 @@ function getSwaggerConfig(): SwaggerConfig {
   const applicationConfig = serviceConfig.application;
   return {
     routePrefix: getConfigValue('documentation.routePrefix', '/documentation'),
-    exposeRoute: getConfigValue('documentation.exposeRoutes', true),
+    exposeRoute: getConfigValue('documentation.exposeRoute', true),
     swagger: {
       info: {
         title: `${applicationConfig.name} API`,

@@ -10,24 +10,24 @@ import serviceConfig from '@heviir/service-config';
 // Package info
 serviceConfig.packageInfo; // read from package.json
 serviceConfig.packageInfo.name; // "name" from package.json
-serviceConfig.packageInfo.version; // "version" from package.json defaults to "1.0.0"
-serviceConfig.packageInfo.description; // "description" from package.json defaults to name + " API"
+serviceConfig.packageInfo.version; // "version" from package.json; defaults to "1.0.0"
+serviceConfig.packageInfo.description; // "description" from package.json; defaults to name + " API"
 
 // Application config
 serviceConfig.application.name; // same as packageInfo.name
 serviceConfig.application.version; // same as packageInfo.version
 serviceConfig.application.description; // same as packageInfo.description
-serviceConfig.application.host; // config file property "host" defaults to "0.0.0.0"
-serviceConfig.application.port; // config file property "port" defaults to 8080
-serviceConfig.application.consumes; // config file property "consumes" defaults to ["application/json"]
-serviceConfig.application.produces; // config file property "produces" defaults to ["application/json"]
+serviceConfig.application.host; // can be configured via "host" in config file; defaults to "0.0.0.0"
+serviceConfig.application.port; // can be configured via "port" in config file; defaults to 8080
+serviceConfig.application.consumes; // can be configured via "consumes" in config file; defaults to ["application/json"]
+serviceConfig.application.produces; // can be configured via "produces" in config file; defaults to ["application/json"]
 
 // Auth config
 serviceConfig.auth.publicKey; // Promise<Buffer>; read from ./keys/public_key.pem; throws if not found
 serviceConfig.auth.privateKey; // Promise<Buffer | undefined>; read from ./keys/private_key.pem; optional
 
 // Environment config
-serviceConfig.environment.environment; // "test" | "development" | "production"
+serviceConfig.environment.environment; // "test" | "development" | "production"; taken from process.env.NODE_ENV
 serviceConfig.environment.isProduction; // boolean
 serviceConfig.environment.isDevelopment; // boolean
 serviceConfig.environment.isTest; // boolean
@@ -51,4 +51,15 @@ serviceConfig.database.port; // defaults to 5432; can be configured via "databas
 serviceConfig.database.user; // defaults to "postgres" in "test" / "development" environment; can be configured via "database.user" in config file
 serviceConfig.database.password; // defaults to "postgres" in "test" / "development" environment; can be configured via "database.password" in config file
 serviceConfig.database.migrationsDirectory; // path to migration files; can be configured via "database.migrationsDirectory" in config file
+
+// Swagger config
+serviceConfig.swagger; // object; config for swagger auto documentation generator
+serviceConfig.swagger.routePrefix; // string; default to "/documentation"; can be configured via "documentation.routePrefix" in config file
+serviceConfig.swagger.exposeRoute; // boolean; default to true; can be configured via "documentation.exposeRoute" in config file
+serviceConfig.swagger.info.title; // string; same as packageInfo.name + " API"
+serviceConfig.swagger.info.description; // string; same as packageInfo.description
+serviceConfig.swagger.info.version; // string; same as packageInfo.version
+serviceConfig.swagger.host; // string;
+serviceConfig.swagger.produces; // same as application.produces
+serviceConfig.swagger.consumes; // same as application.consumes
 ```
