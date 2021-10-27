@@ -8,12 +8,13 @@ default.json for default config
 import serviceConfig from '@heviir/service-config';
 
 // Package info
-serviceConfig.packageInfo; // read from package.json
+serviceConfig.packageInfo; // object; read from package.json
 serviceConfig.packageInfo.name; // "name" from package.json
 serviceConfig.packageInfo.version; // "version" from package.json; defaults to "1.0.0"
 serviceConfig.packageInfo.description; // "description" from package.json; defaults to name + " API"
 
 // Application config
+serviceConfig.application; // object; general application settings
 serviceConfig.application.name; // same as packageInfo.name
 serviceConfig.application.version; // same as packageInfo.version
 serviceConfig.application.description; // same as packageInfo.description
@@ -23,17 +24,19 @@ serviceConfig.application.consumes; // can be configured via "consumes" in confi
 serviceConfig.application.produces; // can be configured via "produces" in config file; defaults to ["application/json"]
 
 // Auth config
+serviceConfig.auth; // object; JWT settings
 serviceConfig.auth.publicKey; // Promise<Buffer>; read from ./keys/public_key.pem; throws if not found
 serviceConfig.auth.privateKey; // Promise<Buffer | undefined>; read from ./keys/private_key.pem; optional
 
 // Environment config
+serviceConfig.environment; // object; environment settings
 serviceConfig.environment.environment; // "test" | "development" | "production"; taken from process.env.NODE_ENV
 serviceConfig.environment.isProduction; // boolean
 serviceConfig.environment.isDevelopment; // boolean
 serviceConfig.environment.isTest; // boolean
 
 // Logger config
-serviceConfig.logger; // fastify pino logger options
+serviceConfig.logger; // object | boolean; fastify pino logger options
 // "test" environment:
 serviceConfig.logger; // false
 // "development" environment:
@@ -45,6 +48,7 @@ serviceConfig.logger.stream; // (message: string) => void; writes to file
 // log file can be configured via "logger.destination" in config file
 
 // Database config
+serviceConfig.database; // object; database connection options
 serviceConfig.database.database; // same as packageInfo.name; can be configured via "database.database" in config file
 serviceConfig.database.host; // defaults to "postgres_container" in "test" / "development" environment; can be configured via "database.host" in config file
 serviceConfig.database.port; // defaults to 5432; can be configured via "database.port" in config file
