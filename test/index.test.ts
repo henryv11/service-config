@@ -37,6 +37,9 @@ describe('service config', () => {
     const [publicKey, privateKey] = await Promise.all([auth.publicKey, auth.privateKey]);
     expect(publicKey.toString('utf-8')).toEqual('this is public key');
     expect(privateKey?.toString('utf-8')).toEqual('this is private key');
+    expect(auth.kafka.brokers).toEqual([]);
+    expect(auth.kafka.clientId).toEqual(packageJson.name);
+    expect(auth.kafka.groupId).toBeDefined();
   });
 
   test('environment', () => {

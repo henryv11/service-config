@@ -39,7 +39,7 @@ function cached<T>(generate: { (): T; name: string }) {
   return generate.name in cache ? <T>cache[generate.name] : <T>(cache[generate.name] = generate());
 }
 
-function getConfigValue<T>(key: string, defaultValue?: T): T;
+function getConfigValue<T>(key: string, defaultValue?: T, isUndefinedAllowed?: false): T;
 function getConfigValue<T>(key: string, defaultValue: T | undefined, isUndefinedAllowed: true): T | undefined;
 function getConfigValue<T>(key: string, defaultValue?: T, isUndefinedAllowed = false) {
   if (config.has(key)) {
@@ -161,6 +161,14 @@ function getAuthConfig(): AuthConfig {
         }
       });
     }),
+    kafka: {
+      clientId: serviceConfig.application.name,
+      brokers: getConfigValue(
+        'auth.kafka.brokers',
+        serviceConfig.environment.isDevelopment || serviceConfig.environment.isTest ? [] : undefined,
+      ),
+      groupId: serviceConfig.application.name + '_' + process.pid,
+    },
   };
 }
 
@@ -236,4 +244,9 @@ interface EnvironmentConfig {
 interface AuthConfig {
   privateKey: Promise<Buffer | undefined>;
   publicKey: Promise<Buffer>;
+  kafka: {
+    groupId: string;
+    clientId: string;
+    brokers: string[];
+  };
 }
