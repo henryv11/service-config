@@ -140,6 +140,11 @@ function getSwaggerConfig(): SwaggerConfig {
 }
 
 function getAuthConfig(): AuthConfig {
+  const defaultBrokersByEnvironment = {
+    development: ['kafka:29092'],
+    test: [],
+    production: undefined,
+  };
   return {
     publicKey: new Promise((onResolve, onReject) => {
       const path = resolve('keys', 'public_key.pem');
@@ -163,10 +168,7 @@ function getAuthConfig(): AuthConfig {
     }),
     kafka: {
       clientId: serviceConfig.application.name,
-      brokers: getConfigValue(
-        'auth.kafka.brokers',
-        serviceConfig.environment.isDevelopment || serviceConfig.environment.isTest ? [] : undefined,
-      ),
+      brokers: getConfigValue('auth.kafka.brokers', defaultBrokersByEnvironment[serviceConfig.environment.environment]),
       groupId: serviceConfig.application.name + '_' + process.pid,
     },
   };
