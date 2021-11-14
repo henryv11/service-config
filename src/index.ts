@@ -141,7 +141,7 @@ function getSwaggerConfig(): SwaggerConfig {
 
 function getAuthConfig(): AuthConfig {
   const defaultBrokersByEnvironment = {
-    development: ['kafka:29092'],
+    development: ['kafka_container:9092'],
     test: [],
     production: undefined,
   };
