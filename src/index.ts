@@ -1,4 +1,5 @@
 import config from 'config';
+import { randomUUID } from 'crypto';
 import { createWriteStream, readFile, readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -29,6 +30,10 @@ const serviceConfig = {
 
   get packageInfo() {
     return cached(getPackageInfo);
+  },
+
+  get kafka() {
+    return cached(getKafkaConfig);
   },
 };
 
@@ -73,6 +78,7 @@ function getApplicationConfig(): ApplicationConfig {
     name,
     version,
     description,
+    pid: randomUUID(),
     host: getConfigValue('host', '0.0.0.0'),
     port: getConfigValue('port', 8080),
     consumes: getConfigValue('consumes', ['application/json']),
@@ -142,11 +148,7 @@ function getSwaggerConfig(): SwaggerConfig {
 }
 
 function getAuthConfig(): AuthConfig {
-  const defaultBrokersByEnvironment = {
-    development: ['kafka_container:9092'],
-    test: [],
-    production: undefined,
-  };
+  const { name, pid } = serviceConfig.application;
   return {
     publicKey: new Promise((onResolve, onReject) => {
       const path = resolve('keys', 'public_key.pem');
@@ -169,10 +171,20 @@ function getAuthConfig(): AuthConfig {
       });
     }),
     kafka: {
-      clientId: serviceConfig.application.name,
-      brokers: getConfigValue('auth.kafka.brokers', defaultBrokersByEnvironment[serviceConfig.environment.environment]),
-      groupId: serviceConfig.application.name + '_' + process.pid,
+      groupId: name + '_' + pid,
     },
+  };
+}
+
+function getKafkaConfig(): KafkaConfig {
+  const defaultBrokersByEnvironment = {
+    development: ['kafka_container:9092'],
+    test: [],
+    production: undefined,
+  };
+  return {
+    clientId: serviceConfig.application.name,
+    brokers: getConfigValue('auth.kafka.brokers', defaultBrokersByEnvironment[serviceConfig.environment.environment]),
   };
 }
 
@@ -202,6 +214,7 @@ interface DatabaseConfig {
 }
 
 interface ApplicationConfig {
+  pid: string;
   host: string;
   port: number;
   name: string;
@@ -249,9 +262,10 @@ interface EnvironmentConfig {
 interface AuthConfig {
   privateKey: Promise<Buffer | undefined>;
   publicKey: Promise<Buffer>;
-  kafka: {
-    groupId: string;
-    clientId: string;
-    brokers: string[];
-  };
+  kafka: { groupId: string };
+}
+
+interface KafkaConfig {
+  brokers: string[];
+  clientId: string;
 }

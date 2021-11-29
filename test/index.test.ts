@@ -1,6 +1,6 @@
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import serviceConfig from '../src';
-import { readFileSync } from 'fs';
 
 const packageJson = JSON.parse(readFileSync(resolve('package.json'), { encoding: 'utf-8' }));
 
@@ -30,6 +30,8 @@ describe('service config', () => {
     expect(application.port).toEqual(8080);
     expect(application.consumes).toEqual(['application/json']);
     expect(application.produces).toEqual(['application/json']);
+    expect(application.pid).toBeDefined();
+    expect(application.pid).toHaveLength(36); // uuidv4 is 36 characters long
   });
 
   test('auth', async () => {
@@ -37,9 +39,7 @@ describe('service config', () => {
     const [publicKey, privateKey] = await Promise.all([auth.publicKey, auth.privateKey]);
     expect(publicKey.toString('utf-8')).toEqual('this is public key');
     expect(privateKey?.toString('utf-8')).toEqual('this is private key');
-    expect(auth.kafka.brokers).toEqual([]);
-    expect(auth.kafka.clientId).toEqual(packageJson.name);
-    expect(auth.kafka.groupId).toBeDefined();
+    expect(auth.kafka.groupId).toEqual(serviceConfig.application.name + '_' + serviceConfig.application.pid);
   });
 
   test('environment', () => {
@@ -65,5 +65,11 @@ describe('service config', () => {
     expect(swagger.swagger.host).toEqual('api.dropshoppers.ee/' + packageJson.name);
     expect(swagger.swagger.consumes).toEqual(['application/json']);
     expect(swagger.swagger.produces).toEqual(['application/json']);
+  });
+
+  test('kafka', () => {
+    const kafka = serviceConfig.kafka;
+    expect(kafka.brokers).toBeInstanceOf(Array);
+    expect(kafka.clientId).toEqual(serviceConfig.application.name);
   });
 });
