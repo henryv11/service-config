@@ -81,33 +81,35 @@ function getApplicationConfig(): ApplicationConfig {
 }
 
 function getLoggerConfig(): LoggerConfig | boolean {
-  const environment = serviceConfig.environment;
-  if (environment.isTest) {
-    return false;
-  }
-  const encoding = 'utf-8';
-  const logDestination = getConfigValue('logger.destination', '.logs');
-  const writeStream = createWriteStream(resolve(logDestination), { flags: 'a', encoding });
-  if (environment.isDevelopment) {
-    return {
-      prettyPrint: getConfigValue('logger.prettyPrint', {
-        colorize: true,
-        levelFirst: true,
-        translateTime: 'yyyy-dd-mm, h:MM:ss TT',
-        crlf: true,
-      }),
-      stream: {
-        write: chunk => {
-          console.log(chunk);
-          writeStream.write(chunk, encoding);
+  switch (serviceConfig.environment.environment) {
+    case 'test':
+      return false;
+    case 'production': {
+      const encoding = 'utf-8';
+      const logDestination = getConfigValue('logger.destination', '.logs');
+      const writeStream = createWriteStream(resolve(logDestination), { flags: 'a', encoding });
+      return {
+        prettyPrint: getConfigValue('logger.prettyPrint', false),
+        stream: { write: chunk => writeStream.write(chunk, encoding) },
+        level: getConfigValue('logger.level', 'info'),
+      };
+    }
+    case 'development':
+    default: {
+      return {
+        prettyPrint: getConfigValue('logger.prettyPrint', {
+          colorize: true,
+          levelFirst: true,
+          translateTime: 'yyyy-dd-mm, h:MM:ss TT',
+          crlf: true,
+        }),
+        stream: {
+          write: chunk => console.log(chunk),
         },
-      },
-    };
+        level: getConfigValue('logger.level', 'debug'),
+      };
+    }
   }
-  return {
-    prettyPrint: getConfigValue('logger.prettyPrint', false),
-    stream: { write: chunk => writeStream.write(chunk, encoding) },
-  };
 }
 
 function getEnvironmentConfig(): EnvironmentConfig {
@@ -219,6 +221,7 @@ interface LoggerConfig {
       }
     | boolean;
   stream: { write(chunk: string): void };
+  level: 'debug' | 'info';
 }
 
 interface SwaggerConfig {
