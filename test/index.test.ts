@@ -28,8 +28,6 @@ describe('service config', () => {
     expect(application.version).toEqual(packageJson.version);
     expect(application.host).toEqual('0.0.0.0');
     expect(application.port).toEqual(8080);
-    expect(application.consumes).toEqual(['application/json']);
-    expect(application.produces).toEqual(['application/json']);
     expect(application.pid).toBeDefined();
     expect(application.pid).toHaveLength(36); // uuidv4 is 36 characters long
   });
@@ -59,12 +57,9 @@ describe('service config', () => {
     const swagger = serviceConfig.swagger;
     expect(swagger.routePrefix).toEqual('/documentation');
     expect(swagger.exposeRoute).toEqual(true);
-    expect(swagger.swagger.info.title).toEqual(packageJson.name + ' API');
-    expect(swagger.swagger.info.description).toEqual(packageJson.description);
-    expect(swagger.swagger.info.version).toEqual(packageJson.version);
-    expect(swagger.swagger.host).toEqual('api.dropshoppers.ee/' + packageJson.name);
-    expect(swagger.swagger.consumes).toEqual(['application/json']);
-    expect(swagger.swagger.produces).toEqual(['application/json']);
+    expect(swagger.openapi.info.title).toEqual(packageJson.name + ' API');
+    expect(swagger.openapi.info.description).toEqual(packageJson.description);
+    expect(swagger.openapi.info.version).toEqual(packageJson.version);
   });
 
   test('kafka', () => {

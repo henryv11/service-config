@@ -81,8 +81,6 @@ function getApplicationConfig(): ApplicationConfig {
     pid: randomUUID(),
     host: getConfigValue('host', '0.0.0.0'),
     port: getConfigValue('port', 8080),
-    consumes: getConfigValue('consumes', ['application/json']),
-    produces: getConfigValue('produces', ['application/json']),
   };
 }
 
@@ -132,17 +130,16 @@ function getEnvironmentConfig(): EnvironmentConfig {
 function getSwaggerConfig(): SwaggerConfig {
   const applicationConfig = serviceConfig.application;
   return {
+    mode: 'dynamic',
     routePrefix: getConfigValue('documentation.routePrefix', '/documentation'),
     exposeRoute: getConfigValue('documentation.exposeRoute', true),
-    swagger: {
+    openapi: {
+      openapi: '3.*.*',
       info: {
         title: `${applicationConfig.name} API`,
         description: applicationConfig.description,
         version: applicationConfig.version,
       },
-      host: getConfigValue('documentation.host', 'api.dropshoppers.ee/' + applicationConfig.name),
-      consumes: applicationConfig.consumes,
-      produces: applicationConfig.produces,
     },
   };
 }
@@ -220,8 +217,6 @@ interface ApplicationConfig {
   name: string;
   version: string;
   description: string;
-  consumes: string[];
-  produces: string[];
 }
 
 interface LoggerConfig {
@@ -238,17 +233,16 @@ interface LoggerConfig {
 }
 
 interface SwaggerConfig {
+  mode: 'dynamic';
   routePrefix: string;
   exposeRoute: boolean;
-  swagger: {
+  openapi: {
+    openapi: string;
     info: {
       title: string;
-      description?: string;
       version: string;
+      description: string;
     };
-    consumes: string[];
-    produces: string[];
-    host: string;
   };
 }
 
